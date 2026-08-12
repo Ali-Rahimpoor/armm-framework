@@ -17,7 +17,7 @@ A lightweight PHP framework designed for building REST APIs. `ARMM` provides rou
 ## Installation
 
 ```bash
-composer require armm/framework
+composer require ali-rahimpoor/armm-framework
 ```
 
 Or, until the package is published on Packagist, install it directly from GitHub:
