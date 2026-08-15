@@ -174,6 +174,16 @@ final class Request
     }
 
     /**
+     * مثل file()، ولی به‌جای آرایه‌ی خام $_FILES، یک شیء UploadedFile
+     * برمی‌گرداند (با متدهای isValid()، mimeType() واقعی و غیره).
+     * برای هر آپلود جدید (مثل تصویر) به‌جای file() از این استفاده کن.
+     */
+    public function uploadedFile(string $key): ?\ARMM\Storage\UploadedFile
+    {
+        return \ARMM\Storage\UploadedFile::fromArray($this->files[$key] ?? null);
+    }
+
+    /**
      * پارامترهای استخراج‌شده از خود مسیر Route (مثلاً {id} در /projects/{id})
      * توسط Router پر می‌شود، نه توسط خود Request.
      */

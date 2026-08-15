@@ -57,7 +57,7 @@ final class Router
     public function dispatch(Request $request): Response
     {
         $method = $request->method();
-        $uri = $request->uri();
+        $uri = $this->normalizeUri($request->uri());
 
         // مرورگرها پیش از هر درخواست غیرساده‌ی cross-origin، یک درخواست
         // OPTIONS (Preflight) می‌فرستند که باید بدون نیاز به تطبیق مسیر
@@ -79,6 +79,21 @@ final class Router
         }
 
         return $this->runPipeline($route, $request);
+    }
+
+    /**
+     * حذف اسلش انتهایی از URI (به‌جز خود مسیر ریشه‌ی «/») تا
+     * domain.ir/products و domain.ir/products/ هر دو با یک Route
+     * تطبیق پیدا کنند. Route ها همیشه بدون اسلش انتهایی ثبت می‌شوند،
+     * پس این نرمال‌سازی باید همیشه پیش از match() انجام شود.
+     */
+    private function normalizeUri(string $uri): string
+    {
+        if ($uri === '/') {
+            return $uri;
+        }
+
+        return rtrim($uri, '/') ?: '/';
     }
 
     private function match(string $method, string $uri): ?Route

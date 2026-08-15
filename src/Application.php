@@ -89,6 +89,18 @@ final class Application
             return \ARMM\Database\Connection::make($c->make(Config::class));
         });
 
+        // FileStorage به basePath پروژه نیاز دارد که یک مقدار primitive
+        // (string) است و Container نمی‌تواند آن را با Auto-wiring حدس
+        // بزند؛ پس این‌جا صریحاً bind می‌شود تا کنترلرها فقط با
+        // type-hint کردن FileStorage آن را از Container بگیرند. اگر کاربر
+        // خودش قبلاً این binding را override کرده باشد (مثلاً برای S3)،
+        // همان باقی می‌ماند.
+        if (!$this->container->has(\ARMM\Storage\FileStorage::class)) {
+            $this->container->bind(\ARMM\Storage\FileStorage::class, function (Container $c) {
+                return new \ARMM\Storage\FileStorage($c->make(Config::class), $this->basePath);
+            });
+        }
+
         // اگر فایل config/app.php کلید cors_allowed_origins را تعریف کرده
         // باشد، CorsMiddleware به‌صورت خودکار روی همان لیست wire می‌شود؛
         // دیگر لازم نیست کاربر خودش این binding را در public/index.php

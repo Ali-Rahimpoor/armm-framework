@@ -4,6 +4,7 @@
  * @var \ARMM\Routing\Router $router این متغیر توسط Application::loadRoutes تزریق می‌شود
  */
 
+use App\Controllers\ImageUploadController;
 use App\Controllers\ProjectController;
 use ARMM\Middleware\AuthMiddleware;
 use ARMM\Middleware\CorsMiddleware;
@@ -24,4 +25,7 @@ $router->group([CorsMiddleware::class, AuthMiddleware::class], function ($admin)
     $admin->post('/projects', [ProjectController::class, 'store']);
     // $admin->put('/projects/{id}', [ProjectController::class, 'update']);
     // $admin->delete('/projects/{id}', [ProjectController::class, 'destroy']);
+
+    // آپلود تصویر: multipart/form-data با یک فیلد به نام «image»
+    $admin->post('/products/images', [ImageUploadController::class, 'upload']);
 });
