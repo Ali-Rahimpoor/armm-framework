@@ -11,6 +11,7 @@ A lightweight PHP framework designed for building REST APIs. `ARMM` provides rou
 * **JsonResponse** with a consistent response format for success and error responses
 * **HttpException** for throwing meaningful HTTP errors from any layer of the application
 * **Session-based Authentication**, suitable for applications with a limited number of users, such as personal admin panels
+* **Image Upload Handling** with real MIME-type validation, unique file naming, configurable storage path, and automatic thumbnail generation via GD
 * **Explicit Config Errors** when accessing missing configuration keys instead of silently returning `null`
 * **Simple Logger** for recording errors and application events
 
@@ -130,6 +131,64 @@ $app->container()->bind(CorsMiddleware::class, function ($c) {
 });
 ```
 
+### File Uploads
+
+ARMM ships with an `ARMM\Storage` namespace for handling image uploads: `UploadedFile` (a typed wrapper around a raw `$_FILES` entry), `FileValidator` (real MIME-type and size validation), `ImageProcessor` (resize/thumbnail via GD), and `FileStorage` (unique naming, configurable disk path, and public URL resolution). `FileValidator` and `FileStorage` are auto-wired by the Container, so you only need to type-hint them in your controller's constructor.
+
+Images must always be sent as `multipart/form-data`, separate from any JSON body:
+
+```js
+const form = new FormData();
+form.append('image', fileInput.files[0]);
+fetch('/products/images', { method: 'POST', body: form });
+```
+
+```php
+// app/Controllers/ImageUploadController.php
+use ARMM\Http\JsonResponse;
+use ARMM\Http\Request;
+use ARMM\Storage\FileStorage;
+use ARMM\Storage\FileValidator;
+
+final class ImageUploadController
+{
+    public function __construct(
+        private FileValidator $validator,
+        private FileStorage $storage
+    ) {}
+
+    public function upload(Request $request): JsonResponse
+    {
+        $image = $request->uploadedFile('image');
+
+        $this->validator->validate($image); // throws HttpException::validation(422) if invalid
+
+        $result = $this->storage->store($image, subdirectory: 'products', thumbnailSize: 200);
+
+        return JsonResponse::created([
+            'path' => $result['path'],
+            'url' => $result['url'],
+            'thumbnail_url' => $result['thumbnail_url'],
+        ]);
+    }
+}
+```
+
+Storage rules are configurable per project via `config/storage.php`; any key you omit falls back to a sensible default:
+
+```php
+// config/storage.php
+return [
+    'upload_path' => __DIR__ . '/../public/uploads', // default: "public/uploads"
+    'allowed_mime_types' => ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+    'max_size_bytes' => 5 * 1024 * 1024, // 5MB
+];
+```
+
+By default, files are stored under `public/uploads`, so `store()` returns a `url` you can use directly (e.g. `<img src="...">`). Setting `upload_path` outside of `public/` returns `null` for `url` instead, since those files should be served through a dedicated route with your own access control.
+
+A complete working example is available in `examples/mini-api/app/Controllers/ImageUploadController.php`.
+
 ## Core Architecture
 
 | Path                  | Responsibility                                                |
@@ -141,6 +200,7 @@ $app->container()->bind(CorsMiddleware::class, function ($c) {
 | `src/Database/`       | Singleton PDO connection                                      |
 | `src/Config/`         | Configuration loading and access                              |
 | `src/Auth/`           | Session-based authentication                                  |
+| `src/Storage/`        | Image upload validation, storage, and thumbnail generation    |
 | `src/Logging/`        | File-based error and event logging                            |
 | `src/Exceptions/`     | HttpException for meaningful HTTP errors                      |
 | `src/Application.php` | Central application entry point that ties everything together |
